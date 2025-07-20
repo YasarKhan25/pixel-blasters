@@ -1,11 +1,30 @@
-# 🚀 Space Shooter - High-Performance Web Game
+# 🚀 Space Shooter - High-Performance Cross-Platform Game
 
 [![React](https://img.shields.io/badge/React-18.3.1-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Latest-blue.svg)](https://www.typescriptlang.org/)
 [![Tailwind](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC.svg)](https://tailwindcss.com/)
-[![Vite](https://img.shields.io/badge/Vite-Latest-646CFF.svg)](https://vitejs.dev/)
+[![Capacitor](https://img.shields.io/badge/Capacitor-Latest-119EFF.svg)](https://capacitorjs.com/)
 
-> An intense space shooting game built with React and TypeScript, optimized for 120fps gameplay with stunning visual effects.
+> An intense space shooting game built with React and TypeScript, optimized for 120fps gameplay across all platforms: Android, iOS, Windows, Linux, and macOS.
+
+## 👨‍💻 Developer
+
+**Mohammed Shaheer Yasar Khan S** - Individual Game Developer
+
+## 🌐 Cross-Platform Support
+
+This game runs smoothly on all major platforms:
+- **📱 Android** - Native mobile app via Capacitor
+- **📱 iOS** - Native mobile app via Capacitor  
+- **💻 Windows** - Web browser or Progressive Web App
+- **🐧 Linux** - Web browser or Progressive Web App
+- **🍎 macOS** - Web browser or Progressive Web App
+
+### Performance Optimizations
+- **120fps gameplay** with frame-independent movement system
+- **Bug-free shooting mechanics** with optimized collision detection
+- **Efficient particle system** for stunning visual effects
+- **Memory-optimized** gameplay with minimal allocations
 
 ## ✨ Features
 
@@ -58,7 +77,7 @@ Pause: P or Pause Button
 - Node.js 18+ 
 - npm or yarn
 
-### Installation & Development
+### Web Development
 
 ```bash
 # Clone the repository
@@ -74,6 +93,29 @@ npm run dev
 
 Visit `http://localhost:8080` to play the game!
 
+### Mobile App Development (Android/iOS)
+
+1. **Export to GitHub** and clone the repository locally
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+3. **Add mobile platforms:**
+   ```bash
+   npx cap add android  # For Android
+   npx cap add ios      # For iOS (requires macOS)
+   ```
+4. **Build and sync:**
+   ```bash
+   npm run build
+   npx cap sync
+   ```
+5. **Run on device/emulator:**
+   ```bash
+   npx cap run android  # For Android (requires Android Studio)
+   npx cap run ios      # For iOS (requires macOS + Xcode)
+   ```
+
 ### Build for Production
 
 ```bash
@@ -83,6 +125,30 @@ npm run build
 # Preview production build
 npm run preview
 ```
+
+## 🔄 GitHub Sync
+
+To sync this project with GitHub for collaborative development:
+
+1. **Export to GitHub**: Use the "Export to GitHub" button in Lovable
+2. **Clone locally**: 
+   ```bash
+   git clone <your-github-repo-url>
+   cd <repo-name>
+   ```
+3. **Install and run**:
+   ```bash
+   npm install
+   npm run dev
+   ```
+4. **Make changes and sync**:
+   ```bash
+   git add .
+   git commit -m "Your improvements"
+   git push origin main
+   ```
+
+The project automatically syncs between Lovable and GitHub for seamless development!
 
 ## 🛠️ Tech Stack
 

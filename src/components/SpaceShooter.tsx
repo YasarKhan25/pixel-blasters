@@ -288,50 +288,57 @@ export function SpaceShooter() {
       enemySpawnRef.current = now;
     }
 
-    // Check collisions
-    setBullets(prevBullets => {
-      const remainingBullets = [...prevBullets];
-      
-      setEnemies(prevEnemies => {
-        return prevEnemies.map(enemy => {
-          const hitBulletIndex = remainingBullets.findIndex(bullet => 
-            staticCollisionChecks.checkCollision(bullet, enemy)
-          );
+    // Check bullet-enemy collisions with improved state management
+    let bulletsToRemove: string[] = [];
+    let enemiesToRemove: string[] = [];
+    let scoreToAdd = 0;
+    
+    bullets.forEach(bullet => {
+      enemies.forEach(enemy => {
+        if (!bulletsToRemove.includes(bullet.id) && !enemiesToRemove.includes(enemy.id) && 
+            staticCollisionChecks.checkCollision(bullet, enemy)) {
+          bulletsToRemove.push(bullet.id);
           
-          if (hitBulletIndex !== -1) {
-            const bullet = remainingBullets[hitBulletIndex];
-            remainingBullets.splice(hitBulletIndex, 1);
+          const newHealth = enemy.health - bullet.damage;
+          if (newHealth <= 0) {
+            enemiesToRemove.push(enemy.id);
+            createParticles(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, 8, '#ff6b35');
+            scoreToAdd += enemy.points;
             
-            const newHealth = enemy.health - bullet.damage;
-            if (newHealth <= 0) {
-              createParticles(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, 8, '#ff6b35');
-              setScore(prev => prev + enemy.points);
-              
-              // Chance to drop power-up
-              if (Math.random() < 0.1) {
-                const powerUpTypes: PowerUp['type'][] = ['health', 'damage', 'speed', 'multishot'];
-                const type = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
-                setPowerUps(prev => [...prev, {
-                  id: `powerup-${Date.now()}`,
-                  x: enemy.x + enemy.width / 2 - 15,
-                  y: enemy.y,
-                  width: 30,
-                  height: 30,
-                  type,
-                  duration: 10000,
-                }]);
-              }
-              
-              return null;
+            // Chance to drop power-up
+            if (Math.random() < 0.1) {
+              const powerUpTypes: PowerUp['type'][] = ['health', 'damage', 'speed', 'multishot'];
+              const type = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
+              setPowerUps(prev => [...prev, {
+                id: `powerup-${Date.now()}-${Math.random()}`,
+                x: enemy.x + enemy.width / 2 - 15,
+                y: enemy.y,
+                width: 30,
+                height: 30,
+                type,
+                duration: 10000,
+              }]);
             }
-            return { ...enemy, health: newHealth };
+          } else {
+            // Update enemy health
+            setEnemies(prev => prev.map(e => 
+              e.id === enemy.id ? { ...e, health: newHealth } : e
+            ));
           }
-          return enemy;
-        }).filter(Boolean) as Enemy[];
+        }
       });
-      
-      return remainingBullets;
     });
+    
+    // Remove bullets and enemies
+    if (bulletsToRemove.length > 0) {
+      setBullets(prev => prev.filter(bullet => !bulletsToRemove.includes(bullet.id)));
+    }
+    if (enemiesToRemove.length > 0) {
+      setEnemies(prev => prev.filter(enemy => !enemiesToRemove.includes(enemy.id)));
+    }
+    if (scoreToAdd > 0) {
+      setScore(prev => prev + scoreToAdd);
+    }
 
     // Check player-enemy collisions
     setEnemies(prevEnemies => {
