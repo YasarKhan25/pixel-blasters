@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -73,6 +73,20 @@ export function SpaceShooter() {
   const gameLoopRef = useRef<number>();
   const lastShotRef = useRef(0);
   const enemySpawnRef = useRef(0);
+  const lastFrameTime = useRef(0);
+  const deltaTimeRef = useRef(0);
+
+  // Performance optimization: Memoize collision detection for static objects
+  const staticCollisionChecks = useMemo(() => ({
+    checkCollision: (obj1: GameObject, obj2: GameObject): boolean => {
+      return (
+        obj1.x < obj2.x + obj2.width &&
+        obj1.x + obj1.width > obj2.x &&
+        obj1.y < obj2.y + obj2.height &&
+        obj1.y + obj1.height > obj2.y
+      );
+    }
+  }), []);
 
   const createParticles = useCallback((x: number, y: number, count: number, color: string) => {
     const newParticles: Particle[] = [];
@@ -192,34 +206,33 @@ export function SpaceShooter() {
     setBullets(prev => [...prev, ...newBullets]);
   }, [player, powerUpEffects]);
 
-  const checkCollision = useCallback((obj1: GameObject, obj2: GameObject): boolean => {
-    return (
-      obj1.x < obj2.x + obj2.width &&
-      obj1.x + obj1.width > obj2.x &&
-      obj1.y < obj2.y + obj2.height &&
-      obj1.y + obj1.height > obj2.y
-    );
-  }, []);
 
-  const gameLoop = useCallback(() => {
+  const gameLoop = useCallback((currentTime: number = 0) => {
     if (gameState !== 'playing') return;
 
-    // Update player position
+    // Calculate delta time for frame-independent movement
+    if (lastFrameTime.current === 0) {
+      lastFrameTime.current = currentTime;
+    }
+    deltaTimeRef.current = Math.min((currentTime - lastFrameTime.current) / 16.67, 2); // Cap at 2x normal speed
+    lastFrameTime.current = currentTime;
+    // Update player position with frame-independent movement
     setPlayer(prev => {
       let newX = prev.x;
       let newY = prev.y;
+      const frameSpeed = PLAYER_SPEED * powerUpEffects.speed * deltaTimeRef.current;
 
       if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
-        newX = Math.max(0, prev.x - PLAYER_SPEED * powerUpEffects.speed);
+        newX = Math.max(0, prev.x - frameSpeed);
       }
       if (keys['ArrowRight'] || keys['d'] || keys['D']) {
-        newX = Math.min(GAME_WIDTH - 40, prev.x + PLAYER_SPEED * powerUpEffects.speed);
+        newX = Math.min(GAME_WIDTH - 40, prev.x + frameSpeed);
       }
       if (keys['ArrowUp'] || keys['w'] || keys['W']) {
-        newY = Math.max(0, prev.y - PLAYER_SPEED * powerUpEffects.speed);
+        newY = Math.max(0, prev.y - frameSpeed);
       }
       if (keys['ArrowDown'] || keys['s'] || keys['S']) {
-        newY = Math.min(GAME_HEIGHT - 40, prev.y + PLAYER_SPEED * powerUpEffects.speed);
+        newY = Math.min(GAME_HEIGHT - 40, prev.y + frameSpeed);
       }
 
       return { x: newX, y: newY };
@@ -230,32 +243,41 @@ export function SpaceShooter() {
       shoot();
     }
 
-    // Update bullets
+    // Update bullets with frame-independent movement
     setBullets(prev => prev
-      .map(bullet => ({ ...bullet, y: bullet.y - bullet.velocity }))
+      .map(bullet => ({ 
+        ...bullet, 
+        y: bullet.y - (bullet.velocity * deltaTimeRef.current) 
+      }))
       .filter(bullet => bullet.y > -20)
     );
 
-    // Update enemies
+    // Update enemies with frame-independent movement
     setEnemies(prev => prev
-      .map(enemy => ({ ...enemy, y: enemy.y + enemy.velocity }))
+      .map(enemy => ({ 
+        ...enemy, 
+        y: enemy.y + (enemy.velocity * deltaTimeRef.current) 
+      }))
       .filter(enemy => enemy.y < GAME_HEIGHT + 50)
     );
 
-    // Update particles
+    // Update particles with frame-independent movement
     setParticles(prev => prev
       .map(particle => ({
         ...particle,
-        x: particle.x + particle.velocity.x,
-        y: particle.y + particle.velocity.y,
-        life: particle.life - 1,
+        x: particle.x + (particle.velocity.x * deltaTimeRef.current),
+        y: particle.y + (particle.velocity.y * deltaTimeRef.current),
+        life: particle.life - deltaTimeRef.current,
       }))
       .filter(particle => particle.life > 0)
     );
 
-    // Update power-ups
+    // Update power-ups with frame-independent movement
     setPowerUps(prev => prev
-      .map(powerUp => ({ ...powerUp, y: powerUp.y + 2 }))
+      .map(powerUp => ({ 
+        ...powerUp, 
+        y: powerUp.y + (2 * deltaTimeRef.current) 
+      }))
       .filter(powerUp => powerUp.y < GAME_HEIGHT + 50)
     );
 
@@ -273,7 +295,7 @@ export function SpaceShooter() {
       setEnemies(prevEnemies => {
         return prevEnemies.map(enemy => {
           const hitBulletIndex = remainingBullets.findIndex(bullet => 
-            checkCollision(bullet, enemy)
+            staticCollisionChecks.checkCollision(bullet, enemy)
           );
           
           if (hitBulletIndex !== -1) {
@@ -314,7 +336,7 @@ export function SpaceShooter() {
     // Check player-enemy collisions
     setEnemies(prevEnemies => {
       const playerObj: GameObject = { ...player, id: 'player', width: 40, height: 40 };
-      const hitEnemy = prevEnemies.find(enemy => checkCollision(playerObj, enemy));
+      const hitEnemy = prevEnemies.find(enemy => staticCollisionChecks.checkCollision(playerObj, enemy));
       
       if (hitEnemy) {
         createParticles(player.x + 20, player.y + 20, 6, '#ff4757');
@@ -343,7 +365,7 @@ export function SpaceShooter() {
     // Check power-up collection
     setPowerUps(prevPowerUps => {
       const playerObj: GameObject = { ...player, id: 'player', width: 40, height: 40 };
-      const collectedPowerUp = prevPowerUps.find(powerUp => checkCollision(playerObj, powerUp));
+      const collectedPowerUp = prevPowerUps.find(powerUp => staticCollisionChecks.checkCollision(playerObj, powerUp));
       
       if (collectedPowerUp) {
         createParticles(collectedPowerUp.x + 15, collectedPowerUp.y + 15, 5, '#2ed573');
@@ -387,7 +409,7 @@ export function SpaceShooter() {
     }
 
     gameLoopRef.current = requestAnimationFrame(gameLoop);
-  }, [gameState, keys, player, shoot, spawnEnemy, checkCollision, createParticles, score, level, powerUpEffects]);
+  }, [gameState, keys, player, shoot, spawnEnemy, createParticles, score, level, powerUpEffects, staticCollisionChecks]);
 
   useEffect(() => {
     if (gameState === 'playing') {
